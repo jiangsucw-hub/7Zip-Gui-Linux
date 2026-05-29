@@ -1,0 +1,10 @@
+[Nemo Action]
+Name=Test archive
+Comment=Test archive integrity (7-Zip File Manager)
+Exec=7zip-gui-cpp --test %F
+Icon-Name=7zip-gui-cpp
+Selection=any
+Extensions=7z;zip;tar;gz;bz2;xz;rar;iso;tgz;tbz2;txz;deb;rpm;jar;apk;tar.gz;tar.bz2;tar.xz;zst;lz4;lz;lzo;lzh;lzma;arj;cab;wim;cpio;ar;z;dmg;
+Quote=double
+EscapeSpaces=true
+Groups=7-Zip File Manager;

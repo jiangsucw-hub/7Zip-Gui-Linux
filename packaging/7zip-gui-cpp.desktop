@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+Name=7-Zip File Manager
+GenericName=Archive Manager
+Comment=Extract and manage archives with 7-Zip
+Exec=7zip-gui-cpp %f
+Icon=7zip-gui-cpp
+Terminal=false
+Categories=Utility;Archiving;GTK;
+MimeType=application/x-7z-compressed;application/zip;application/x-tar;application/gzip;application/x-bzip;application/x-xz;application/vnd.rar;application/x-7z-compressed-tar;application/x-compressed-tar;application/x-xz-compressed-tar;application/x-bzip-compressed-tar;application/x-lzma-compressed-tar;application/x-lzip-compressed-tar;application/x-zstd-compressed-tar;application/x-rar;application/x-cd-image;application/x-iso9660-image;
+StartupNotify=false
+Actions=Browse;
+
+[Desktop Action Browse]
+Name=Browse archive
+Comment=Open archive in 7-Zip File Manager
+Exec=7zip-gui-cpp --open %f

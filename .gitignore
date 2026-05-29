@@ -1,0 +1,18 @@
+# Build
+build/
+debian-staging/
+*.o
+moc_*
+*.deb
+
+# IDE
+.vscode/
+.idea/
+
+# Qt
+*.pro.user
+mocs_compilation.cpp
+
+# OS
+.DS_Store
+Thumbs.db

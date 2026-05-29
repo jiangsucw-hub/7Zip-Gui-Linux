@@ -1,0 +1,12 @@
+#!/bin/bash
+# 7-Zip File Manager: Add to archive...
+args=()
+for f in "$@"; do
+    [ -n "$f" ] || continue
+    args+=("$f")
+done
+if [ "${#args[@]}" -eq 0 ]; then
+    7zip-gui-cpp --add
+else
+    7zip-gui-cpp --add "${args[@]}"
+fi

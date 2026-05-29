@@ -1,0 +1,147 @@
+#!/bin/bash
+set -e
+
+REAL="/usr/lib/7zip-gui-cpp/7zip-gui-cpp"
+WRAPPER="/usr/bin/7zip-gui-cpp"
+LIBDIR="/usr/lib/7zip-gui-cpp"
+WRAPPER_SRC="${LIBDIR}/7zip-gui-cpp.wrapper.sh"
+
+# Migrate old installs that put the ELF binary directly in /usr/bin.
+if [ ! -x "$REAL" ] && [ -x "$WRAPPER" ] && file "$WRAPPER" 2>/dev/null | grep -q ELF; then
+    mkdir -p "$LIBDIR"
+    mv "$WRAPPER" "$REAL"
+fi
+
+# Always install the launcher script to /usr/bin when we have a real ELF.
+if [ -x "$REAL" ] && [ -f "$WRAPPER_SRC" ]; then
+    install -m 755 "$WRAPPER_SRC" "$WRAPPER"
+elif [ -x "$REAL" ] && [ ! -x "$WRAPPER" ]; then
+    ln -sf "$REAL" "$WRAPPER" 2>/dev/null || cp -a "$REAL" "$WRAPPER"
+fi
+
+chmod +x "$REAL" "$WRAPPER" "${LIBDIR}"/thunar-*.sh 2>/dev/null || true
+
+if command -v update-desktop-database &>/dev/null; then
+    update-desktop-database /usr/share/applications || true
+fi
+# Double-click: default handler for common archive MIME types (user can change in file preferences).
+if command -v xdg-mime &>/dev/null; then
+    for mime in application/x-7z-compressed application/zip application/vnd.rar \
+                application/x-tar application/gzip application/x-bzip2 application/x-xz; do
+        xdg-mime default 7zip-gui-cpp.desktop "$mime" 2>/dev/null || true
+    done
+fi
+if [ -f /usr/share/icons/hicolor/scalable/apps/7zip-gui-cpp.svg ] \
+   || [ -f /usr/share/icons/hicolor/256x256/apps/7zip-gui-cpp.png ]; then
+    if command -v gtk-update-icon-cache &>/dev/null; then
+        gtk-update-icon-cache -f /usr/share/icons/hicolor/ || true
+    fi
+fi
+
+# Nautilus scripts (packaged under /usr/share/nautilus/scripts)
+if [ -d /usr/share/nautilus/scripts ]; then
+    chmod +x /usr/share/nautilus/scripts/7zip-* /usr/share/nautilus/scripts/*Qt* 2>/dev/null || true
+fi
+
+# Thunar: merge UCA actions (system + existing user configs)
+if command -v thunar &>/dev/null; then
+    _add_uca_actions() {
+        local uca_file="$1"
+        mkdir -p "$(dirname "$uca_file")"
+        if [ ! -f "$uca_file" ]; then
+            cat > "$uca_file" << 'XMLEMPTY'
+<?xml version="1.0" encoding="UTF-8"?>
+<actions>
+</actions>
+XMLEMPTY
+        fi
+        python3 -c "
+import xml.etree.ElementTree as ET
+f = '$uca_file'
+try:
+    tree = ET.parse(f)
+    root = tree.getroot()
+    for a in list(root.findall('action')):
+        c = a.find('command')
+        cmd = (c.text or '') if c is not None else ''
+        if any(x in cmd for x in ('7zip-gui-cpp', 'thunar-extract-here', 'thunar-test', 'thunar-add')):
+            root.remove(a)
+    tree.write(f, encoding='UTF-8', xml_declaration=True)
+except Exception as e:
+    import sys
+    print(f'UCA cleanup warning: {e}', file=sys.stderr)
+"
+        sed -i 's|</actions>||' "$uca_file"
+        cat >> "$uca_file" << 'UCAEOF'
+    <!-- 7-Zip File Manager -->
+    <action>
+        <icon>7zip-gui-cpp</icon>
+        <name>Extract Here</name>
+        <submenu>7-Zip File Manager</submenu>
+        <command>/usr/bin/7zip-gui-cpp --extract-here %F</command>
+        <description>Extract archive to current directory</description>
+        <patterns>*.7z;*.zip;*.tar;*.gz;*.bz2;*.xz;*.rar;*.iso;*.tgz;*.tbz2;*.txz;*.deb;*.rpm;*.jar;*.apk;*.tar.gz;*.tar.bz2;*.tar.xz;*.zst;*.lz4;*.lz;*.lzh;*.lzma;*.arj;*.cab;*.wim;*.cpio;*.ar;*.z;*.dmg</patterns>
+        <directories>false</directories>
+        <audio-files>false</audio-files>
+        <image-files>false</image-files>
+        <other-files>true</other-files>
+        <text-files>false</text-files>
+        <video-files>false</video-files>
+    </action>
+    <action>
+        <icon>7zip-gui-cpp</icon>
+        <name>Test archive</name>
+        <submenu>7-Zip File Manager</submenu>
+        <command>/usr/bin/7zip-gui-cpp --test %F</command>
+        <description>Test archive integrity</description>
+        <patterns>*.7z;*.zip;*.tar;*.gz;*.bz2;*.xz;*.rar;*.iso;*.tgz;*.tbz2;*.txz;*.deb;*.rpm;*.jar;*.apk;*.tar.gz;*.tar.bz2;*.tar.xz;*.zst;*.lz4;*.lz;*.lzh;*.lzma;*.arj;*.cab;*.wim;*.cpio;*.ar;*.z;*.dmg</patterns>
+        <directories>false</directories>
+        <audio-files>false</audio-files>
+        <image-files>false</image-files>
+        <other-files>true</other-files>
+        <text-files>false</text-files>
+        <video-files>false</video-files>
+    </action>
+    <action>
+        <icon>7zip-gui-cpp</icon>
+        <name>Add to archive...</name>
+        <submenu>7-Zip File Manager</submenu>
+        <command>/usr/bin/7zip-gui-cpp --add %F</command>
+        <description>Create archive from selected files</description>
+        <patterns>*</patterns>
+        <directories>true</directories>
+        <audio-files>true</audio-files>
+        <image-files>true</image-files>
+        <other-files>true</other-files>
+        <text-files>true</text-files>
+        <video-files>true</video-files>
+    </action>
+</actions>
+UCAEOF
+        sed -i '/^$/N;/^\n$/d' "$uca_file"
+    }
+
+    echo "Installing Thunar UCA actions..."
+    _add_uca_actions "/etc/xdg/Thunar/uca.xml"
+    for home in /home/*; do
+        user="${home##*/}"
+        if id "$user" >/dev/null 2>&1; then
+            _add_uca_actions "$home/.config/Thunar/uca.xml"
+        fi
+    done
+    [ -f /root/.config/Thunar/uca.xml ] && _add_uca_actions "/root/.config/Thunar/uca.xml"
+    if [ -f /usr/share/7zip-gui-cpp/patch-thunar-uca.py ]; then
+        python3 /usr/share/7zip-gui-cpp/patch-thunar-uca.py /etc/xdg/Thunar/uca.xml || true
+        for home in /home/*; do
+            uca="$home/.config/Thunar/uca.xml"
+            [ -f "$uca" ] && python3 /usr/share/7zip-gui-cpp/patch-thunar-uca.py "$uca" || true
+        done
+    fi
+fi
+
+# KDE: refresh service menu cache if kbuildsycoca6 exists
+if command -v kbuildsycoca6 &>/dev/null; then
+    kbuildsycoca6 --noincremental 2>/dev/null || true
+fi
+
+exit 0

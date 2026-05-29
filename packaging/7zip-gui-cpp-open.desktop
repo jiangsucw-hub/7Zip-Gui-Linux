@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=7-Zip File Manager
+GenericName=Archive Manager
+Comment=Browse archive contents
+Exec=7zip-gui-cpp --open %f
+Icon=7zip-gui-cpp
+Terminal=false
+Categories=Utility;Archiving;
+NoDisplay=true

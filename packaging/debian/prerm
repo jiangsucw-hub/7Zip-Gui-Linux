@@ -1,0 +1,33 @@
+#!/bin/bash
+set -e
+
+rm -f /usr/share/nemo/actions/7zip-*.nemo_action
+rm -f /usr/share/nautilus/scripts/7zip-* /usr/share/nautilus/scripts/'7zip-'*
+rm -f /usr/share/caja/actions/7zip-*.caja_action
+rm -f /usr/share/kservices5/ServiceMenus/7zip-gui-cpp.desktop
+rm -f /usr/share/kservices5/ServiceMenus/7zip-gui-cpp-add.desktop
+rm -f /usr/share/nautilus-python/extensions/7zip_gui_cpp.py
+
+_clean_uca() {
+    local f="$1"
+    [ -f "$f" ] || return
+    python3 -c "
+import xml.etree.ElementTree as ET
+tree = ET.parse('$f')
+root = tree.getroot()
+for a in list(root.findall('action')):
+    c = a.find('command')
+    cmd = (c.text or '') if c is not None else ''
+    if '7zip-gui-cpp' in cmd:
+        root.remove(a)
+tree.write('$f', encoding='UTF-8', xml_declaration=True)
+" 2>/dev/null || true
+}
+
+_clean_uca "/etc/xdg/Thunar/uca.xml"
+for home in /home/*; do
+    _clean_uca "$home/.config/Thunar/uca.xml"
+done
+_clean_uca "/root/.config/Thunar/uca.xml"
+
+exit 0

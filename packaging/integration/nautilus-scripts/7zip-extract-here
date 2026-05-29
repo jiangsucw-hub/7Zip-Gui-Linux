@@ -1,0 +1,6 @@
+#!/bin/bash
+# 7-Zip File Manager: Extract Here
+for f in "$@"; do
+    [ -n "$f" ] || continue
+    7zip-gui-cpp --extract-here "$f"
+done

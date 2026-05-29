@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Service
+Name=7-Zip File Manager
+ServiceTypes=KonqPopup/Plugin,all/allfiles
+Actions=7zipAdd;
+Icon=7zip-gui-cpp
+X-KDE-Priority=TopLevel
+
+[Desktop Action 7zipAdd]
+Name=Add to archive...
+Name[zh_CN]=添加到压缩包...
+Icon=7zip-gui-cpp
+Exec=7zip-gui-cpp --add %F

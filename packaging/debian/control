@@ -1,0 +1,19 @@
+Package: 7zip-gui-cpp
+Version: @VERSION@-@REV@
+Section: utils
+Priority: optional
+Architecture: amd64
+Depends: libqt6widgets6, p7zip-full, libxcb-cursor0
+Recommends: qt6-gtk-platformtheme, nemo | nautilus | thunar | caja | dolphin
+Suggests: python3-nautilus, python3-gi
+Maintainer: 7zip-gui-cpp
+Description: GNOME-friendly archive manager (Qt 6 + 7z)
+ Native-style Linux GUI for p7zip: browse, create, extract and test
+ archives (7z, zip, tar, rar, iso, and more).
+ .
+ Features:
+  - Browse archives in a table view
+  - Create archives with format, level and password options
+  - Extract and test integrity
+  - File manager context menus (Nemo, Nautilus, Thunar, Caja, Dolphin)
+  - Uses system Qt 6 (GTK platform theme recommended)
