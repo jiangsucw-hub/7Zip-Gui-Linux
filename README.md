@@ -1,4 +1,4 @@
-# 7zip-gui-Linux
+# 7Zip-Gui-Mint-Linux
 
 Linux 压缩包管理器，**C++20 + Qt 6 Widgets**，后端调用系统 `7z`（`p7zip-full`）。
 
