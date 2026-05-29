@@ -11,42 +11,39 @@ namespace ArchiveUtils {
 
 // ─── 目录结构分析 ────────────────────────────────────────────
 
-/** 如果压缩包根级别只有一个目录，返回该目录名，否则返回空 */
-static QString singleTopLevelName(const QVector<ArchiveEntry> &entries)
-{
-    QSet<QString> roots;
-    for (const ArchiveEntry &e : entries) {
-        QString p = e.path;
-        if (p.endsWith(QLatin1Char('/')))
-            p.chop(1);                                    // 去掉尾部斜杠
-        if (p.isEmpty())
-            continue;
-        const int slash = p.indexOf(QLatin1Char('/'));    // 取第一级目录/文件名
-        const QString root = slash < 0 ? p : p.left(slash);
-        if (!root.isEmpty())
-            roots.insert(root);
+namespace {
+    struct TopLevelInfo {
+        int count = 0;
+        QString singleName;  // 仅在 count == 1 时有效
+    };
+
+    /** 一次遍历同时统计顶级条目数并获取唯一的顶级名 */
+    TopLevelInfo analyzeTopLevel(const QVector<ArchiveEntry> &entries)
+    {
+        QSet<QString> roots;
+        for (const ArchiveEntry &e : entries) {
+            QString p = e.path;
+            if (p.endsWith(QLatin1Char('/')))
+                p.chop(1);
+            if (p.isEmpty())
+                continue;
+            const int slash = p.indexOf(QLatin1Char('/'));
+            const QString root = slash < 0 ? p : p.left(slash);
+            if (!root.isEmpty())
+                roots.insert(root);
+        }
+        TopLevelInfo info;
+        info.count = roots.size();
+        if (info.count == 1)
+            info.singleName = *roots.begin();
+        return info;
     }
-    if (roots.size() != 1)
-        return {};                                        // 多于一个顶级条目
-    return *roots.begin();
-}
+} // anonymous namespace
 
 /** 统计压缩包中顶级条目的数量 */
 int countTopLevelItems(const QVector<ArchiveEntry> &entries)
 {
-    QSet<QString> roots;
-    for (const ArchiveEntry &e : entries) {
-        QString p = e.path;
-        if (p.endsWith(QLatin1Char('/')))
-            p.chop(1);
-        if (p.isEmpty())
-            continue;
-        const int slash = p.indexOf(QLatin1Char('/'));
-        const QString root = slash < 0 ? p : p.left(slash);
-        if (!root.isEmpty())
-            roots.insert(root);
-    }
-    return roots.size();
+    return analyzeTopLevel(entries).count;
 }
 
 // ─── 解压目标目录 ────────────────────────────────────────────
@@ -77,8 +74,9 @@ ExtractDestination resolveExtractDestinationFromEntries(const QString &baseDir,
                                                         const QString &archivePath,
                                                         const QVector<ArchiveEntry> &entries)
 {
+    const TopLevelInfo tl = analyzeTopLevel(entries);
     ExtractDestination dest;
-    dest.topLevelCount = countTopLevelItems(entries);       // 统计顶级条目数
+    dest.topLevelCount = tl.count;
 
     QString parent = baseDir;
     if (parent.isEmpty())
@@ -88,9 +86,8 @@ ExtractDestination resolveExtractDestinationFromEntries(const QString &baseDir,
 
     if (dest.topLevelCount <= 1) {
         // 单条目：直接解压到父目录（除非冲突则创建子目录）
-        const QString rootName = singleTopLevelName(entries);
         const bool wouldConflict =
-            !rootName.isEmpty() && QFileInfo::exists(parent + rootName);
+            !tl.singleName.isEmpty() && QFileInfo::exists(parent + tl.singleName);
         if (wouldConflict) {
             dest.outputDir = uniqueSubfolder(parent, archivePath) + QLatin1Char('/');
             dest.createdSubfolder = true;

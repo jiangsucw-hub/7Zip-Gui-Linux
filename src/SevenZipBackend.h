@@ -69,7 +69,7 @@ private:
     bool runProcess(QStringList args, const QString &password, QString *combinedOut,
                     const std::function<void(int)> &progressCallback = nullptr);
     QVector<ArchiveEntry> parseSltOutput(const QString &output) const;  // 解析 7z l -slt 输出
-    ArchiveEntry entryFromMap(const QMap<QString, QString> &map) const;
+    ArchiveEntry entryFromMap(const QHash<QString, QString> &map) const;
     static bool outputNeedsPassword(const QString &combined);          // 检查输出是否提示需要密码
 };
 

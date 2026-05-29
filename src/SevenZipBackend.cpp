@@ -4,7 +4,7 @@
 
 #include <QElapsedTimer>
 #include <QFileInfo>
-#include <QMap>
+#include <QHash>
 #include <QObject>
 #include <QProcess>
 #include <QRegularExpression>
@@ -110,9 +110,9 @@ bool SevenZipBackend::runProcess(QStringList args, const QString &password, QStr
 {
     // 强制 UTF-8 输出以避免 GBK/其他编码导致的乱码
     args.prepend(QStringLiteral("-sccUTF-8"));
-    // 如果有密码，添加到参数中
+    // 如果有密码，使用 -p 让 7z 从 stdin 读取，避免密码出现在 /proc/.../cmdline
     if (!password.isEmpty())
-        args.prepend(QStringLiteral("-p") + password);
+        args.prepend(QStringLiteral("-p"));
     // 如果需要进度回调，启用 7z 进度输出到 stderr 的模式
     if (progressCallback)
         args.append(QStringLiteral("-bsp1"));
@@ -169,6 +169,12 @@ bool SevenZipBackend::runProcess(QStringList args, const QString &password, QStr
         throw SevenZipError(QStringLiteral("7z process failed to start"));
     }
 
+    // 通过 stdin 传递密码，避免密码出现在 /proc/PID/cmdline 中
+    if (!password.isEmpty()) {
+        proc.write((password + QLatin1Char('\n')).toUtf8());
+        proc.closeWriteChannel();
+    }
+
     // 轮询等待进程结束或超时
     QElapsedTimer timer;
     timer.start();
@@ -214,7 +220,7 @@ QVector<ArchiveEntry> SevenZipBackend::listArchive(const QString &path, const QS
 QVector<ArchiveEntry> SevenZipBackend::parseSltOutput(const QString &output) const
 {
     QVector<ArchiveEntry> entries;
-    QMap<QString, QString> current;  // 当前条目的属性集合
+    QHash<QString, QString> current;  // 当前条目的属性集合
     bool pastHeader = false;         // 是否已跳过表头分割线
 
     const QStringList lines = output.split(QLatin1Char('\n'));
@@ -260,7 +266,7 @@ QVector<ArchiveEntry> SevenZipBackend::parseSltOutput(const QString &output) con
 }
 
 /** 从 key-value map 构造一个 ArchiveEntry */
-ArchiveEntry SevenZipBackend::entryFromMap(const QMap<QString, QString> &d) const
+ArchiveEntry SevenZipBackend::entryFromMap(const QHash<QString, QString> &d) const
 {
     ArchiveEntry e;
     e.path = d.value(QStringLiteral("Path"));

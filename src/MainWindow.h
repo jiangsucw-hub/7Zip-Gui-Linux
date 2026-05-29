@@ -157,4 +157,5 @@ private:
     QAction *m_refreshAct = nullptr;
     QAction *m_aboutAct = nullptr;
     QComboBox *m_languageCombo = nullptr;
+    QList<QAction *> m_toolbarActions;  // 缓存避免 setBusy 时递归遍历部件树
 };

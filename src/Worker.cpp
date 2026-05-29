@@ -36,8 +36,9 @@ void Worker::doProbeForOpen(const QString &path)
             encryptedSignalDetected = true;                       // 列出即报密码错 = 加密
         }
 
-        // 第二层防御：对不暴露 per-entry 加密标记的格式再用 test 探测
-        if (!encryptedSignalDetected) {
+        // 仅当 listing 未返回任何条目时才用 test 做二次探测
+        // （某些格式可能整体加密而不暴露每个条目的加密标记）
+        if (!encryptedSignalDetected && probeEntries.isEmpty()) {
             try {
                 m_backend->test(path);                            // 不带密码测试
             } catch (const PasswordRequiredError &) {
@@ -126,40 +127,27 @@ void Worker::doExtract(const QString &archive, const QString &outDir, const QStr
 void Worker::doExtractHere(const QString &archive, const QString &baseDir, const QString &password)
 {
     ensureBackend();
-    QString outputDir;
-    bool outputDirExistedBefore = true;
+    // 总是创建子目录解压，避免需要预先列出压缩包内容（消除双重读取）
+    const QString outputDir = ArchiveUtils::uniqueSubfolder(baseDir, archive) + QLatin1Char('/');
+    const bool outputDirExistedBefore = QDir(outputDir).exists();
     try {
         QElapsedTimer timer;
-        timer.start();                                             // 计时开始
-        const qint64 sizeBefore = QFileInfo(archive).size();       // 压缩包原始大小
+        timer.start();
+        const qint64 sizeBefore = QFileInfo(archive).size();
 
-        // 列出一次获取条目列表，同时用于目标路径计算和大小统计
-        const QVector<ArchiveEntry> entries = m_backend->listArchive(archive, password);
-        const qint64 uncompressedSize = ArchiveUtils::entriesUncompressedSize(entries);
-        const ExtractDestination dest =
-            ArchiveUtils::resolveExtractDestinationFromEntries(baseDir, archive, entries);
-        outputDir = dest.outputDir;
-        outputDirExistedBefore = QDir(outputDir).exists();         // 记录解压前目录是否存在
-        m_backend->extract(archive, dest.outputDir, password, {}, m_progress);
+        m_backend->extract(archive, outputDir, password, {}, m_progress);
 
-        // 构建统计信息
-        OperationStats stats;
-        stats.elapsedMs = timer.elapsed();
-        stats.sizeBefore = sizeBefore;
-        stats.sizeAfter = uncompressedSize;
-        stats.isCompress = false;
+        // 从文件系统计算未压缩大小，避免二次读取压缩包
+        const qint64 uncompressedSize = ArchiveUtils::fileOrDirSize(outputDir);
 
-        emit extractHereFinished(dest.outputDir, stats.elapsedMs, stats.sizeBefore, stats.sizeAfter);
+        emit extractHereFinished(outputDir, timer.elapsed(), sizeBefore, uncompressedSize);
     } catch (const PasswordRequiredError &) {
-        // 清理自动创建的目录
-        if (!outputDir.isEmpty() && !outputDirExistedBefore) {
+        if (!outputDir.isEmpty() && !outputDirExistedBefore)
             QDir(outputDir).removeRecursively();
-        }
         emit error(tr("Password required or incorrect."), true);
     } catch (const SevenZipError &e) {
-        if (!outputDir.isEmpty() && !outputDirExistedBefore) {
+        if (!outputDir.isEmpty() && !outputDirExistedBefore)
             QDir(outputDir).removeRecursively();
-        }
         emit error(e.message(), false);
     }
 }

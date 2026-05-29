@@ -11,9 +11,7 @@ class PasswordDialog : public QDialog {
 public:
     explicit PasswordDialog(const QString &archiveName, QWidget *parent = nullptr);
     QString password() const;                            // 返回用户输入的密码
-    bool cancelled() const { return m_cancelled; }       // 用户是否取消
 
 private:
     QLineEdit *m_edit = nullptr;
-    bool m_cancelled = true;                             // 默认视为取消
 };

@@ -132,13 +132,12 @@ static QIcon extractActionIcon()
  */
 static QString summarizeTestOutput(const QString &output)
 {
-    const QString normalized = output;
-    const bool ok = normalized.contains(QStringLiteral("Everything is Ok"), Qt::CaseInsensitive);
+    const bool ok = output.contains(QStringLiteral("Everything is Ok"), Qt::CaseInsensitive);
     if (ok)
         return QObject::tr("Archive OK.");
 
     QStringList lines;
-    const QStringList all = normalized.split(QLatin1Char('\n'));
+    const QStringList all = output.split(QLatin1Char('\n'));
     for (const QString &raw : all) {
         QString line = raw;
         line.remove(QLatin1Char('\r'));                            // 去掉回车
@@ -256,7 +255,7 @@ void MainWindow::deferInitialShowUntilOpenCompletes(bool enabled)
 void MainWindow::setBusy(bool busy)
 {
     m_busy = busy;
-    for (QAction *a : findChildren<QAction *>())
+    for (QAction *a : m_toolbarActions)
         a->setEnabled(!busy);
 }
 
@@ -344,6 +343,10 @@ void MainWindow::setupUi()
             &MainWindow::onLanguageSelectionChanged);
 
     menuBar()->hide();                                               // 隐藏菜单栏
+
+    // 缓存所有工具栏 action 指针，避免 setBusy 时递归遍历部件树
+    m_toolbarActions = {m_openAct, m_extractAct, m_testAct, m_refreshAct, m_aboutAct};
+
     retranslateUi();
 }
 
@@ -1292,8 +1295,10 @@ void MainWindow::onAddFinished()
     const QString path = m_lastCreatedArchivePath;
     m_lastCompressStats.elapsedMs = m_operationTimer.elapsed();
     // 等待异步大小计算完成并读取结果
-    if (m_pendingCompressSizeFuture.isValid() && m_pendingCompressSizeFuture.isFinished())
+    if (m_pendingCompressSizeFuture.isValid()) {
+        m_pendingCompressSizeFuture.waitForFinished();
         m_pendingCompressSizeBefore = m_pendingCompressSizeFuture.result();
+    }
     m_lastCompressStats.sizeBefore = m_pendingCompressSizeBefore;
     m_lastCompressStats.sizeAfter = QFileInfo::exists(path) ? QFileInfo(path).size() : 0;
     m_lastCompressStats.isCompress = true;

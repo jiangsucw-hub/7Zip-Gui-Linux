@@ -427,7 +427,7 @@ static int runTest(QWidget *parent, const QString &archive)
             applyStayOnTop(&pwdDlg);
             if (DialogUtils::execCentered(pwdDlg, parent) != QDialog::Accepted
                 || pwdDlg.password().isEmpty()) {
-                std::exit(0);  // 用户取消，直接退出
+                return 0;
             }
             password = pwdDlg.password();
         }

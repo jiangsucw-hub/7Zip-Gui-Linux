@@ -64,7 +64,7 @@ AddDialog::AddDialog(const QString &defaultArchivePath, QWidget *parent) : QDial
     m_levelCombo->addItem(tr("Normal"), 5);                            // 默认
     m_levelCombo->addItem(tr("Maximum"), 7);
     m_levelCombo->addItem(tr("Ultra"), 9);
-    m_levelCombo->setCurrentIndex(2);                                  // 默认 Fast
+    m_levelCombo->setCurrentIndex(3);                                  // 默认 Normal
     grid->addWidget(m_levelCombo, 2, 1);
 
     // ── 行 3：密码 ──

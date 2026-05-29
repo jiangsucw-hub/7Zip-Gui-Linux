@@ -24,10 +24,7 @@ PasswordDialog::PasswordDialog(const QString &archiveName, QWidget *parent) : QD
     layout->addWidget(m_edit);
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-    connect(buttons, &QDialogButtonBox::accepted, this, [this]() {
-        m_cancelled = false;
-        accept();
-    });
+    connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     layout->addWidget(buttons);
 
