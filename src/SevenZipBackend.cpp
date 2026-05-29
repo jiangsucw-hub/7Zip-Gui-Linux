@@ -110,9 +110,9 @@ bool SevenZipBackend::runProcess(QStringList args, const QString &password, QStr
 {
     // 强制 UTF-8 输出以避免 GBK/其他编码导致的乱码
     args.prepend(QStringLiteral("-sccUTF-8"));
-    // 如果有密码，使用 -p 让 7z 从 stdin 读取，避免密码出现在 /proc/.../cmdline
+    // 如果有密码，添加到参数中
     if (!password.isEmpty())
-        args.prepend(QStringLiteral("-p"));
+        args.prepend(QStringLiteral("-p") + password);
     // 如果需要进度回调，启用 7z 进度输出到 stderr 的模式
     if (progressCallback)
         args.append(QStringLiteral("-bsp1"));
@@ -167,12 +167,6 @@ bool SevenZipBackend::runProcess(QStringList args, const QString &password, QStr
     if (!proc.waitForStarted(30000)) {
         proc.kill();
         throw SevenZipError(QStringLiteral("7z process failed to start"));
-    }
-
-    // 通过 stdin 传递密码，避免密码出现在 /proc/PID/cmdline 中
-    if (!password.isEmpty()) {
-        proc.write((password + QLatin1Char('\n')).toUtf8());
-        proc.closeWriteChannel();
     }
 
     // 轮询等待进程结束或超时
